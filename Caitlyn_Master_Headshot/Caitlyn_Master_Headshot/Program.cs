@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -37,7 +37,7 @@ namespace Caitlyn_Master_Headshot
             if (myHero.ChampionName != "Caitlyn")
                 return;
 
-            Game.PrintChat("<font color=\"#FF001E\">Minion HP Bar - </font><font color=\"#FF980F\"> Loaded</font>");
+            Game.PrintChat("<font color=\"#FF001E\">Caitlyn Master Headshot- </font><font color=\"#FF980F\"> Loaded</font>");
             initMenu();
 
             GameObject.OnCreate += Obj_AI_Base_OnCreate;
@@ -222,7 +222,7 @@ namespace Caitlyn_Master_Headshot
             return trapNear;
         }
 
-        private static int CountEnemyNear(Vector3 From)
+        private static int CountEnemyNear(Vector3 From, int Range)
         {
             int enemyNear = 0;
             foreach(var unit in HeroManager.Enemies)
@@ -308,7 +308,7 @@ namespace Caitlyn_Master_Headshot
 
             foreach (var unit in HeroManager.Enemies)
             {
-                if (ValidTarget(unit) && myHero.Distance(unit) > (myHero.AttackRange+150) && R.GetDamage(unit, 0) > unit.Health && CountEnemyNear(myHero.Position) == 0)
+                if (ValidTarget(unit) && myHero.Distance(unit) > (myHero.AttackRange+150) && R.GetDamage(unit, 0) > unit.Health && CountEnemyNear(myHero.Position, 1500) == 0)
                 {
                     PredictionInput predInput = new PredictionInput { From = myHero.Position, Radius = 1500, Range = 3000 };
                     predInput.CollisionObjects[0] = CollisionableObjects.YasuoWall;
@@ -317,7 +317,7 @@ namespace Caitlyn_Master_Headshot
                     IEnumerable<Obj_AI_Base> rCol = Collision.GetCollision(new List<Vector3> { unit.Position }, predInput).ToArray();
                     IEnumerable<Obj_AI_Base> rObjCol = rCol as Obj_AI_Base[] ?? rCol.ToArray();
 
-                    if (rObjCol.Count() == 0 && CountEnemyNear(unit.Position) == 1)
+                    if (rObjCol.Count() == 0 && CountEnemyNear(unit.Position, 1000) == 1)
                         R.Cast(unit);
                 }
             }
@@ -327,9 +327,11 @@ namespace Caitlyn_Master_Headshot
         {
             foreach (var unit in HeroManager.Enemies)
             {
-                if (ValidTarget(unit) && myHero.Distance(unit) > (myHero.AttackRange + 100) && Q.GetDamage(unit, 0) > unit.Health)
+                if (ValidTarget(unit) && Q.GetDamage(unit, 0) > unit.Health)
                 {
                     PredictionOutput qPred = Q.GetPrediction(unit);
+                    if (qPred.CastPosition.Distance(myHero.Position) > myHero.AttackRange+200 && CountEnemyNear(myHero.Position, (int)myHero.AttackRange+200) == 0)
+
                     if ((int)qPred.Hitchance >= myMenu.Item("qKillSteal.Hitchance").GetValue<Slider>().Value)
                         Q.Cast(qPred.CastPosition);
                 }
