@@ -10,7 +10,7 @@ namespace MinionHPBar
 
     class Program
     {
-        public static Obj_AI_Base Player = ObjectManager.Player;
+        public static Obj_AI_Base myHero = ObjectManager.Player;
         public static Menu myMenu;
         
         private static void Main(string[] args)
@@ -21,29 +21,41 @@ namespace MinionHPBar
         private static void Game_Load(EventArgs args)
         {
 
-            myMenu = new Menu("Rambe - Minion HP Bar", "RambeMinionHpBar", true);
+            initMenu();
+            Game.PrintChat("<font color=\"#FF001E\">Minion HP Bar - </font><font color=\"#FF980F\"> Loaded</font>");
+
+            Drawing.OnDraw += OnDraw;
+        }
+
+        private static void initMenu()
+        {
+            myMenu = new Menu("Minion HP Bar", "RambeMinionHpBar", true);
+
             myMenu.AddSubMenu(new Menu("Draw", "Draw"));
-            myMenu.SubMenu("Draw").AddItem(new MenuItem("drawFrame", "Draw frame").SetValue(new Circle(true, Color.Black)));
-            myMenu.SubMenu("Draw").AddItem(new MenuItem("frameColor", "Change frame color when minion dead").SetValue(new Circle(true, Color.White)));
-            myMenu.SubMenu("Draw").AddItem(new MenuItem("drawBars", "Draw Bars").SetValue(new Circle(true, Color.Black)));
+                myMenu.SubMenu("Draw").AddItem(new MenuItem("drawFrame", "Draw frame").SetValue(new Circle(true, Color.Black)));
+                myMenu.SubMenu("Draw").AddItem(new MenuItem("frameColor", "Change frame color when minion dead").SetValue(new Circle(true, Color.White)));
+                myMenu.SubMenu("Draw").AddItem(new MenuItem("drawBars", "Draw Bars").SetValue(new Circle(true, Color.Black)));
+
             myMenu.AddItem(new MenuItem("minionRange", "Minion Range").SetValue(new Slider(1500, 200, 2000)));
+
+            myMenu.AddItem(new MenuItem("void", ""));
+            myMenu.AddItem(new MenuItem("author", "Author: Rambe"));
+
             myMenu.AddToMainMenu();
 
-            Game.PrintChat("<font color=\"#FF001E\">Minion HP Bar - </font><font color=\"#FF980F\"> Loaded</font>");
-            Drawing.OnDraw += OnDraw;
         }
 
         private static void OnDraw(EventArgs args)
         {
             
-            if (Player == null)
+            if (myHero == null)
                 return;
 
-            var enemyMinions = MinionManager.GetMinions(Player.Position, myMenu.Item("minionRange").GetValue<Slider>().Value, MinionTypes.All, MinionTeam.Enemy, MinionOrderTypes.None);      
+            var enemyMinions = MinionManager.GetMinions(myHero.Position, myMenu.Item("minionRange").GetValue<Slider>().Value, MinionTypes.All, MinionTeam.Enemy, MinionOrderTypes.None);      
             foreach (var minion in enemyMinions.Where(minion => minion.IsValidTarget(myMenu.Item("minionRange").GetValue<Slider>().Value)))
             {
                 var hpBarPosition = minion.HPBarPosition;
-                double Dmg = Math.Ceiling(Player.GetAutoAttackDamage(minion, true));
+                double Dmg = Math.Ceiling(myHero.GetAutoAttackDamage(minion, true));
                 double nbrAttack = Math.Ceiling(minion.MaxHealth / Dmg);
                 double xMultiplicator = (60 / nbrAttack);
 
