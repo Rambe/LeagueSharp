@@ -4,11 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LeagueSharp;
-//using Debug = LeagueSharp.SDK.Core.Utils.Logging;
-// Logging.Write()(LeagueSharp.SDK.LogLevel.Info, "this is a test {0}", Variable.ToString());
 using LeagueSharp.Common;
 using SharpDX; 
 using Collision = LeagueSharp.Common.Collision;
+using Color = System.Drawing.Color;
 
 namespace Caitlyn_Master_Headshot
 {
@@ -45,14 +44,20 @@ namespace Caitlyn_Master_Headshot
             GameObject.OnDelete += Obj_AI_Base_OnDelete;
             Game.OnUpdate += Update;
             Obj_AI_Base.OnProcessSpellCast += OnProcessSpellCast;
+            AntiGapcloser.OnEnemyGapcloser += AntiGapcloser_OnEnemyGapcloser;
+            Obj_AI_Base.OnBuffAdd += OnBuffAdd;
+            Drawing.OnDraw += OnDraw;
         }
 
         private static void initVariable()
         {
             Q = new Spell(SpellSlot.Q, true);
+            Q.Range = Q.Range - 50;
             W = new Spell(SpellSlot.W, true);
             E = new Spell(SpellSlot.E, true);
+            E.Range = E.Range - 50;
             R = new Spell(SpellSlot.R, true);
+
             lastTrap = Game.Time;
             myHero = ObjectManager.Player;
         }
@@ -60,33 +65,67 @@ namespace Caitlyn_Master_Headshot
         private static void initMenu()
         {
             myMenu = new Menu("Caitlyn - Master Headshot", "CaitlynMasterHeadshot", true);
-            myMenu.AddSubMenu(new Menu("Orbwalk Settings", "InitOrbwalker"));
-            Orbwalker = new Orbwalking.Orbwalker(myMenu.SubMenu("InitOrbwalker"));
 
             myMenu.AddSubMenu(new Menu("Combo Settings", "Combo"));;
-            myMenu.SubMenu("Combo").AddItem(new MenuItem("useQ", "Use (Q)").SetValue(true));
-            myMenu.SubMenu("Combo").AddItem(new MenuItem("qHitChance", "(Q) Hit Chance").SetValue(new Slider(4, 3, 6)));
-            myMenu.SubMenu("Combo").AddItem(new MenuItem("infoW", ""));
-            myMenu.SubMenu("Combo").AddItem(new MenuItem("useW", "Use (W)").SetValue(true));
-            myMenu.SubMenu("Combo").AddItem(new MenuItem("wDelay", "Delay Between Each Trap (ms)").SetValue(new Slider(1500, 0, 3000)));
-            myMenu.SubMenu("Combo").AddItem(new MenuItem("wHitChance", "(W) Hit Chance").SetValue(new Slider(5, 3, 6)));
-            myMenu.SubMenu("Combo").AddItem(new MenuItem("infoE", ""));
-            myMenu.SubMenu("Combo").AddItem(new MenuItem("useE", "Use (E)").SetValue(true));
-            myMenu.SubMenu("Combo").AddItem(new MenuItem("eHitChance", "(E) Hit Chance").SetValue(new Slider(5, 3, 6)));
+                myMenu.SubMenu("Combo").AddItem(new MenuItem("useQ", "Use (Q)").SetValue(true));
+                myMenu.SubMenu("Combo").AddItem(new MenuItem("qHitChance", "(Q) Hit Chance").SetValue(new Slider(3, 3, 6)));
+                myMenu.SubMenu("Combo").AddItem(new MenuItem("infoW", ""));
+                myMenu.SubMenu("Combo").AddItem(new MenuItem("useW", "Use (W)").SetValue(true));
+                myMenu.SubMenu("Combo").AddItem(new MenuItem("wDelay", "Delay Between Each Trap (ms)").SetValue(new Slider(1500, 0, 3000)));
+                myMenu.SubMenu("Combo").AddItem(new MenuItem("wHitChance", "(W) Hit Chance").SetValue(new Slider(5, 3, 6)));
+                myMenu.SubMenu("Combo").AddItem(new MenuItem("infoE", ""));
+                myMenu.SubMenu("Combo").AddItem(new MenuItem("useE", "Use (E)").SetValue(true));
+                myMenu.SubMenu("Combo").AddItem(new MenuItem("eHitChance", "(E) Hit Chance").SetValue(new Slider(5, 3, 6)));
 
             myMenu.AddSubMenu(new Menu("Harass Settings", "Harass")); ;
-            myMenu.SubMenu("Harass").AddItem(new MenuItem("useQ.Harass", "Use (Q)").SetValue(true));
-            myMenu.SubMenu("Harass").AddItem(new MenuItem("qHitChance.Harass", "(Q) Hit Chance").SetValue(new Slider(5, 3, 6)));
-            myMenu.SubMenu("Harass").AddItem(new MenuItem("qMana", "Mana Manger").SetValue(new Slider(80, 0, 100)));
+                myMenu.SubMenu("Harass").AddItem(new MenuItem("useQ.Harass", "Use (Q)").SetValue(true));
+                myMenu.SubMenu("Harass").AddItem(new MenuItem("qHitChance.Harass", "(Q) Hit Chance").SetValue(new Slider(5, 3, 6)));
+                myMenu.SubMenu("Harass").AddItem(new MenuItem("qMana", "Mana Manger").SetValue(new Slider(80, 0, 100)));
 
             myMenu.AddSubMenu(new Menu("Ultimate Settings", "R"));
                 myMenu.SubMenu("R").AddItem(new MenuItem("useR", "Auto Use (R)").SetValue(true));
                 myMenu.SubMenu("R").AddItem(new MenuItem("rCombo", "Use while Combo").SetValue(true));
 
+            myMenu.AddSubMenu(new Menu("Trap Settings", "Trap"));
+                myMenu.SubMenu("Trap").AddItem(new MenuItem("autoW", "Auto (W)").SetValue(true));
+
+            myMenu.AddSubMenu(new Menu("Anti GapCloser Settings", "AntiGapCloser"));
+                myMenu.SubMenu("AntiGapCloser").AddItem(new MenuItem("AntiGapCloser", "Auto (E) AntiGapCloser").SetValue(true));
+
+            myMenu.AddSubMenu(new Menu("KillSteal Settings", "KillSteal"));
+                myMenu.SubMenu("KillSteal").AddItem(new MenuItem("qKillSteal", "Use (Q)").SetValue(true));
+                myMenu.SubMenu("KillSteal").AddItem(new MenuItem("qKillSteal.Hitchance", "(Q) Hit Chance").SetValue(new Slider(3, 3, 6)));
+
+            myMenu.AddSubMenu(new Menu("Drawing Settings", "Draw"));
+                myMenu.SubMenu("Draw").AddItem(new MenuItem("qRange", "Draw (Q)").SetValue(new Circle(true, Color.AliceBlue)));
+                myMenu.SubMenu("Draw").AddItem(new MenuItem("wRange", "Draw (W)").SetValue(new Circle(true, Color.Aqua)));
+                myMenu.SubMenu("Draw").AddItem(new MenuItem("eRange", "Draw (E)").SetValue(new Circle(true, Color.Aquamarine)));
+
+            myMenu.AddSubMenu(new Menu("Orbwalk Settings", "InitOrbwalker"));
+                Orbwalker = new Orbwalking.Orbwalker(myMenu.SubMenu("InitOrbwalker"));
+
+            myMenu.AddItem(new MenuItem("void", ""));
+            myMenu.AddItem(new MenuItem("author", "Author: Rambe"));
+
             myMenu.AddToMainMenu();
         }
 
         // Callback
+        private static void OnDraw(EventArgs args)
+        {
+            if (myHero == null)
+                return;
+            if (myHero.Position.IsOnScreen() && Q.IsReady() && myMenu.Item("qRange").GetValue<Circle>().Active)
+                Render.Circle.DrawCircle(ObjectManager.Player.Position, Q.Range, myMenu.Item("qRange").GetValue<Circle>().Color);
+
+            if (myHero.Position.IsOnScreen() && W.IsReady() && myMenu.Item("wRange").GetValue<Circle>().Active)
+                Render.Circle.DrawCircle(ObjectManager.Player.Position, W.Range, myMenu.Item("wRange").GetValue<Circle>().Color);
+
+            if (myHero.Position.IsOnScreen() && E.IsReady() && myMenu.Item("eRange").GetValue<Circle>().Active)
+                Render.Circle.DrawCircle(ObjectManager.Player.Position, E.Range, myMenu.Item("eRange").GetValue<Circle>().Color);
+
+        }
+
         private static void Update(EventArgs args)
         {
             if (myHero == null || myHero.IsDead)
@@ -95,7 +134,10 @@ namespace Caitlyn_Master_Headshot
             if (myMenu.Item("useR").GetValue<Boolean>())
                 autoCastR();
 
-            switch (Orbwalker.ActiveMode)
+            if (myMenu.Item("qKillSteal").GetValue<Boolean>())
+                qKillSteal();
+
+                switch (Orbwalker.ActiveMode)
             {
                 case Orbwalking.OrbwalkingMode.Combo:
                     Combo();
@@ -108,7 +150,7 @@ namespace Caitlyn_Master_Headshot
 
         private static void OnProcessSpellCast(Obj_AI_Base sender, GameObjectProcessSpellCastEventArgs Args)
         {
-            if (Q.IsReady() && sender.IsMe && (int)Args.Slot == 49)
+            if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo && Q.IsReady() && sender.IsMe && (int)Args.Slot == 49)
             {
                 var Target = TargetSelector.GetTarget(1200, TargetSelector.DamageType.Physical);
                 if (ValidTarget(Target) && Target.NetworkId == Args.Target.NetworkId)
@@ -117,6 +159,18 @@ namespace Caitlyn_Master_Headshot
                     if ((int)qPred.Hitchance > myMenu.Item("qHitChance").GetValue<Slider>().Value)
                         Q.Cast(qPred.CastPosition);
                 }
+            }
+        }
+
+        public static void AntiGapcloser_OnEnemyGapcloser(ActiveGapcloser gapcloser)
+        {
+            if (!myMenu.Item("AntiGapCloser").GetValue<bool>())
+                return;
+
+            if (E.IsReady())
+            {
+                PredictionOutput ePred = E.GetPrediction(gapcloser.Sender);
+                E.Cast(ePred.CastPosition);
             }
         }
 
@@ -135,6 +189,18 @@ namespace Caitlyn_Master_Headshot
             {
                 if (trapDict.ContainsKey(obj.NetworkId))
                     trapDict.Remove(obj.NetworkId);
+            }
+        }
+
+        private static void OnBuffAdd(Obj_AI_Base sender, Obj_AI_BaseBuffAddEventArgs Args)
+        {
+            if (!myMenu.Item("autoW").GetValue<Boolean>())
+                return;
+
+            if (W.IsReady() && sender.IsEnemy && sender.IsChampion() && sender.Distance(myHero) < W.Range)
+            {
+                if (Args.Buff.Type == BuffType.Stun || Args.Buff.Type == BuffType.Taunt || Args.Buff.Type == BuffType.Knockup || Args.Buff.Type == BuffType.Snare)
+                    W.Cast(sender.Position);
             }
         }
 
@@ -169,7 +235,10 @@ namespace Caitlyn_Master_Headshot
 
         private static Obj_AI_Hero GetTarget()
         {
-            Obj_AI_Hero Target = TargetSelector.GetTarget(1200, TargetSelector.DamageType.Physical);
+            Obj_AI_Hero Target = TargetSelector.GetTarget(myHero.AttackRange, TargetSelector.DamageType.Physical);
+            if(!ValidTarget(Target))
+                Target = TargetSelector.GetTarget(1200, TargetSelector.DamageType.Physical);
+
             return Target;
         }
 
@@ -223,14 +292,13 @@ namespace Caitlyn_Master_Headshot
 
         private static void qHarass(Obj_AI_Hero unit)
         {
-            if (Q.IsReady() && myMenu.Item("useQ.Harass").GetValue<Boolean>())
+            if (Q.IsReady() && myMenu.Item("useQ.Harass").GetValue<Boolean>() && myHero.ManaPercent > myMenu.Item("qMana").GetValue<Slider>().Value)
             {
                 PredictionOutput qPred = Q.GetPrediction(unit);
                 if ((int)qPred.Hitchance >= myMenu.Item("qHitChance.Harass").GetValue<Slider>().Value)
                     Q.Cast(qPred.CastPosition);
             }
         }
-
 
         // Misc
         private static void autoCastR()
@@ -242,15 +310,28 @@ namespace Caitlyn_Master_Headshot
             {
                 if (ValidTarget(unit) && myHero.Distance(unit) > (myHero.AttackRange+150) && R.GetDamage(unit, 0) > unit.Health && CountEnemyNear(myHero.Position) == 0)
                 {
-                    PredictionInput predInput = new PredictionInput { From = myHero.Position, Radius = 800, Range = 3000 };
+                    PredictionInput predInput = new PredictionInput { From = myHero.Position, Radius = 1500, Range = 3000 };
                     predInput.CollisionObjects[0] = CollisionableObjects.YasuoWall;
                     predInput.CollisionObjects[1] = CollisionableObjects.Heroes;
                
                     IEnumerable<Obj_AI_Base> rCol = Collision.GetCollision(new List<Vector3> { unit.Position }, predInput).ToArray();
                     IEnumerable<Obj_AI_Base> rObjCol = rCol as Obj_AI_Base[] ?? rCol.ToArray();
 
-                    if (rObjCol.Count() == 0)
+                    if (rObjCol.Count() == 0 && CountEnemyNear(unit.Position) == 1)
                         R.Cast(unit);
+                }
+            }
+        }
+
+        private static void qKillSteal()
+        {
+            foreach (var unit in HeroManager.Enemies)
+            {
+                if (ValidTarget(unit) && myHero.Distance(unit) > (myHero.AttackRange + 100) && Q.GetDamage(unit, 0) > unit.Health)
+                {
+                    PredictionOutput qPred = Q.GetPrediction(unit);
+                    if ((int)qPred.Hitchance >= myMenu.Item("qKillSteal.Hitchance").GetValue<Slider>().Value)
+                        Q.Cast(qPred.CastPosition);
                 }
             }
         }
