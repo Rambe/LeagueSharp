@@ -37,7 +37,7 @@ namespace Caitlyn_Master_Headshot
             if (myHero.ChampionName != "Caitlyn")
                 return;
 
-            Game.PrintChat("Loaded");
+            Game.PrintChat("<font color=\"#FF001E\">Minion HP Bar - </font><font color=\"#FF980F\"> Loaded</font>");
             initMenu();
 
             GameObject.OnCreate += Obj_AI_Base_OnCreate;
