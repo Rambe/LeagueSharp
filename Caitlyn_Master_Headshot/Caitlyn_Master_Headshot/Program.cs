@@ -308,7 +308,7 @@ namespace Caitlyn_Master_Headshot
 
             foreach (var unit in HeroManager.Enemies)
             {
-                if (ValidTarget(unit) && myHero.Distance(unit) > (myHero.AttackRange+150) && R.GetDamage(unit, 0) > unit.Health && CountEnemyNear(myHero.Position, 1500) == 0)
+                if (ValidTarget(unit) && myHero.Distance(unit) > (myHero.AttackRange+500) && R.GetDamage(unit, 0) > unit.Health && CountEnemyNear(myHero.Position, 1500) == 0)
                 {
                     PredictionInput predInput = new PredictionInput { From = myHero.Position, Radius = 1500, Range = 3000 };
                     predInput.CollisionObjects[0] = CollisionableObjects.YasuoWall;
@@ -327,12 +327,10 @@ namespace Caitlyn_Master_Headshot
         {
             foreach (var unit in HeroManager.Enemies)
             {
-                if (ValidTarget(unit) && Q.GetDamage(unit, 0) > unit.Health)
+                if (ValidTarget(unit) && Q.GetDamage(unit, 0) > unit.Health && CountEnemyNear(myHero.Position, (int)myHero.AttackRange) == 0)
                 {
                     PredictionOutput qPred = Q.GetPrediction(unit);
-                    if (qPred.CastPosition.Distance(myHero.Position) > myHero.AttackRange+200 && CountEnemyNear(myHero.Position, (int)myHero.AttackRange+200) == 0)
-
-                    if ((int)qPred.Hitchance >= myMenu.Item("qKillSteal.Hitchance").GetValue<Slider>().Value)
+                    if ((int)qPred.Hitchance >= myMenu.Item("qKillSteal.Hitchance").GetValue<Slider>().Value && myHero.Distance(qPred.CastPosition) > (myHero.AttackRange + 100) && unit.MoveSpeed >= myHero.MoveSpeed)
                         Q.Cast(qPred.CastPosition);
                 }
             }
